@@ -113,7 +113,7 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3
         internal int DebugToolBar;
         internal bool PoseMode;
         internal bool Broken;
-        internal string Edit;
+        internal bool Edit;
 
         private static readonly GUILayoutOption SizeOptions = GUILayout.Height(RadialMenu.Size);
         private static readonly GUILayoutOption[] Options = { GUILayout.ExpandWidth(true), SizeOptions };

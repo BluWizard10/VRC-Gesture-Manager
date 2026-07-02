@@ -106,10 +106,11 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3.Vrc3Debug.Avatar
             {
                 var wOption = GUILayout.Width(width);
                 var iOption = GUILayout.Width(width / 3);
+                var dOption = GUILayout.Width(width + 7);
 
                 using (new GUILayout.VerticalScope())
                 {
-                    GUILayout.Label("Parameters", GestureManagerStyles.GuiHandTitle, wOption);
+                    if (GmgLayoutHelper.TitleButton("Parameters", module.Edit ? "View-Mode" : "Edit-Mode")) module.Edit = !module.Edit;
                     module.ParamFilterSearch();
                     GUILayout.Space(5);
                     using (new GUILayout.HorizontalScope(wOption))
@@ -120,16 +121,16 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3.Vrc3Debug.Avatar
                     }
 
                     var intTime = Vrc3Param.Time;
-                    ParametersCategory(module.UserFilteredParams, "[User Parameters]", width, wOption, iOption, intTime, module);
-                    ParametersCategory(module.VrcFilteredParams, "[VRC Defaults]", width, wOption, iOption, intTime, module);
+                    ParametersCategory(module.UserFilteredParams, "[User Parameters]", width, wOption, iOption, dOption, intTime, module);
+                    ParametersCategory(module.VrcFilteredParams, "[VRC Defaults]", width, wOption, iOption, dOption, intTime, module);
                 }
             }
 
-            private static void ParametersCategory(Dictionary<string, Vrc3Param> vParams, string title, float width, GUILayoutOption wOption, GUILayoutOption iOption, int intTime, ModuleVrc3 module)
+            private static void ParametersCategory(Dictionary<string, Vrc3Param> vParams, string title, float width, GUILayoutOption wOption, GUILayoutOption iOption, GUILayoutOption dOption, int intTime, ModuleVrc3 module)
             {
                 if (vParams.Count <= 0) return;
                 Foldout(title, GUILayout.Width(width + 16), GUILayout.Width(width / 3));
-                foreach (var (kString, param) in vParams) ShowParam(module, intTime, kString, param, wOption, iOption);
+                foreach (var (kString, param) in vParams) ShowParam(module, intTime, kString, param, wOption, iOption, dOption);
             }
 
             private static void Foldout(string text, GUILayoutOption wWidth, GUILayoutOption iWidth)
@@ -143,29 +144,22 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3.Vrc3Debug.Avatar
                 }
             }
 
-            private static void ShowParam(ModuleVrc3 module, int intTime, string key, Vrc3Param param, GUILayoutOption wOption, GUILayoutOption iOption)
+            private static void ShowParam(ModuleVrc3 module, int intTime, string key, Vrc3Param param, GUILayoutOption wOption, GUILayoutOption iOption, GUILayoutOption dOption)
             {
                 GUILayout.Space(-4);
                 using (new GmgLayoutHelper.GuiBackground(Color.Lerp(Color, GUI.backgroundColor, (intTime - param.LastUpdate) / 100f)))
                 using (new GUILayout.HorizontalScope(GUI.skin.box, wOption))
                 {
-                    GUILayout.Label(key, iOption);
-                    GUILayout.Label(param.TypeText, iOption);
-                    ParametersLayoutValue(module, key, param, iOption);
+                    if (!module.Edit)
+                    {
+                        GUILayout.Label(key, iOption);
+                        GUILayout.Label(param.TypeText, iOption);
+                        GmgLayoutHelper.GuiLabel(LabelTuple(param), iOption);
+                    }
+                    else FieldTuple(param, module, dOption);
                 }
-            }
 
-            private static void ParametersLayoutValue(ModuleVrc3 module, string key, Vrc3Param param, GUILayoutOption iOption)
-            {
-                if (module.Edit != key)
-                {
-                    GmgLayoutHelper.GuiLabel(LabelTuple(param), iOption);
-                    var rect = GUILayoutUtility.GetLastRect();
-                    rect.x += rect.width - 20;
-                    rect.width = 15;
-                    if (GUI.Toggle(rect, false, "")) module.Edit = key;
-                }
-                else FieldTuple(param, module, iOption);
+                if (module.Edit) GUILayout.Space(1);
             }
 
             private static void TrackingControlLayout(float width, Dictionary<VRCAvatarDescriptor.AnimLayerType, ModuleVrc3.LayerData> data, Dictionary<string, VRC_AnimatorTrackingControl.TrackingType> trackingControls, bool locomotionDisabled, bool poseSpace)
@@ -283,19 +277,28 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3.Vrc3Debug.Avatar
 
             private static void FieldTuple(Vrc3Param param, ModuleVrc3 module, GUILayoutOption innerOption)
             {
+                GUILayout.Space(2);
                 var rect = GUILayoutUtility.GetRect(new GUIContent(), GUI.skin.label, innerOption);
                 switch (param.Type)
                 {
                     case AnimatorControllerParameterType.Float:
-                        if (GmgLayoutHelper.UnityFieldEnterListener(param.FloatValue(), module, rect, EditorGUI.FloatField, param.Set, module.Edit)) module.Edit = null;
+                        EditorGUI.BeginChangeCheck();
+                        var floatValue = param.FloatValue();
+                        floatValue = GmgLayoutHelper.UnclampedSlider(rect, param.Name, floatValue);
+                        if (EditorGUI.EndChangeCheck()) param.Set(module, floatValue);
                         break;
                     case AnimatorControllerParameterType.Int:
-                        if (GmgLayoutHelper.UnityFieldEnterListener(param.IntValue(), module, rect, EditorGUI.IntField, param.Set, module.Edit)) module.Edit = null;
+                        EditorGUI.BeginChangeCheck();
+                        var intValue = param.IntValue();
+                        intValue = GmgLayoutHelper.UnclampedIntSlider(rect, param.Name, intValue);
+                        if (EditorGUI.EndChangeCheck()) param.Set(module, intValue);
                         break;
                     case AnimatorControllerParameterType.Bool:
                     case AnimatorControllerParameterType.Trigger:
-                        param.Set(module, !param.BoolValue());
-                        module.Edit = null;
+                        EditorGUI.BeginChangeCheck();
+                        var isValue = param.BoolValue();
+                        isValue = GmgLayoutHelper.UnclampedBool(rect, param.Name, isValue);
+                        if (EditorGUI.EndChangeCheck()) param.Set(module, isValue);
                         break;
                     default: throw new ArgumentOutOfRangeException();
                 }

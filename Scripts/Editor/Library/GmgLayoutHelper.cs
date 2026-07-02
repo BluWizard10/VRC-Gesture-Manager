@@ -9,9 +9,6 @@ namespace BlackStartX.GestureManager.Editor.Library
 {
     public static class GmgLayoutHelper
     {
-        private static object _unityFieldEnterListenerData;
-        private static string _unityFieldEnterListenerName;
-
         public struct Toolbar
         {
             private GUIContent[] _contents;
@@ -74,26 +71,6 @@ namespace BlackStartX.GestureManager.Editor.Library
                 using (new GuiContent(GestureManagerStyles.IconContentColor))
                     return GUILayout.Button(active ? GestureManagerStyles.BackTexture : GestureManagerStyles.GearTexture, GUIStyle.none);
             }
-        }
-
-        public static bool UnityFieldEnterListener<T1, T2>(T1 initialText, T2 argument, Rect rect, Func<Rect, T1, T1> field, Action<T2, T1, object> onEscape, string controlName)
-        {
-            if (_unityFieldEnterListenerName != controlName) _unityFieldEnterListenerData = null;
-            var isEnter = Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter;
-            var isEscape = Event.current.keyCode == KeyCode.Escape;
-            _unityFieldEnterListenerName = controlName;
-            GUI.SetNextControlName(controlName);
-            GUI.FocusControl(controlName);
-            _unityFieldEnterListenerData ??= initialText;
-            var t = field(rect, _unityFieldEnterListenerData is T1 d ? d : default);
-            if (isEnter) onEscape(argument, _unityFieldEnterListenerData is T1 data ? data : default, null);
-            else _unityFieldEnterListenerData = t;
-            if (!isEnter && !isEscape) return false;
-            _unityFieldEnterListenerData = null;
-            GUI.SetNextControlName(controlName);
-            GUI.FocusControl(controlName);
-            EditorGUI.LabelField(Rect.zero, "");
-            return true;
         }
 
         /* ╭────────────────────────────╮ *
@@ -327,6 +304,47 @@ namespace BlackStartX.GestureManager.Editor.Library
                 RecordObjects(o, EventName);
                 return true;
             }
+        }
+
+        public static bool UnclampedBool(Rect rect, string label, bool value)
+        {
+            rect = EditorGUI.PrefixLabel(rect, new GUIContent(label));
+            var buttonRect = new Rect(rect.x, rect.y, rect.width - EditorGUIUtility.fieldWidth - 2f, rect.height);
+            var toggleRect = new Rect(rect.xMax - EditorGUIUtility.fieldWidth, rect.y, EditorGUIUtility.fieldWidth, rect.height);
+            if (Event.current.type == EventType.MouseDown && buttonRect.Contains(Event.current.mousePosition)) GUIUtility.keyboardControl = 0;
+            value = GUI.Toggle(buttonRect, value, value ? "✓" : "✗", EditorStyles.miniButton);
+            value = GUI.Toggle(toggleRect, value, value ? "True" : "False", EditorStyles.textField);
+            return value;
+        }
+
+        public static float UnclampedSlider(Rect rect, string label, float value, float minLeftValue = -1, float maxRightValue = 1)
+        {
+            var fieldRect = new Rect(rect.xMax - EditorGUIUtility.fieldWidth, rect.y, EditorGUIUtility.fieldWidth, rect.height);
+            var isFieldClicked = Event.current.type == EventType.MouseDown && fieldRect.Contains(Event.current.mousePosition);
+            if (isFieldClicked) Event.current.type = EventType.Ignore;
+            EditorGUI.BeginChangeCheck();
+            var sliderResult = EditorGUI.Slider(rect, label, value, minLeftValue, maxRightValue);
+            var isSliderChanged = EditorGUI.EndChangeCheck();
+            if (isFieldClicked) Event.current.type = EventType.MouseDown;
+            GUI.SetNextControlName("UnclampedFloatField");
+            var fieldValue = EditorGUI.FloatField(fieldRect, value);
+            if (isFieldClicked) GUI.FocusControl("UnclampedFloatField");
+            return isSliderChanged ? sliderResult : fieldValue;
+        }
+
+        public static int UnclampedIntSlider(Rect rect, string label, int value, int minLeftValue = 0, int maxRightValue = 255)
+        {
+            var fieldRect = new Rect(rect.xMax - EditorGUIUtility.fieldWidth, rect.y, EditorGUIUtility.fieldWidth, rect.height);
+            var isFieldClicked = Event.current.type == EventType.MouseDown && fieldRect.Contains(Event.current.mousePosition);
+            if (isFieldClicked) Event.current.type = EventType.Ignore;
+            EditorGUI.BeginChangeCheck();
+            var intSliderResult = EditorGUI.IntSlider(rect, label, value, minLeftValue, maxRightValue);
+            var isSliderChanged = EditorGUI.EndChangeCheck();
+            if (isFieldClicked) Event.current.type = EventType.MouseDown;
+            GUI.SetNextControlName("UnclampedIntField");
+            var intFieldValue = EditorGUI.IntField(fieldRect, value);
+            if (isFieldClicked) GUI.FocusControl("UnclampedIntField");
+            return isSliderChanged ? intSliderResult : intFieldValue;
         }
     }
 }
