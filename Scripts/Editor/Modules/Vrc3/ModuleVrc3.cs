@@ -1086,8 +1086,8 @@ namespace BlackStartX.GestureManager.Editor.Modules.Vrc3
 
         private void FilterParam()
         {
-            UserFilteredParams = Params.Where(ParamMatch).Where(IsUserParam).ToDictionary(pair => pair.Key, pair => pair.Value);
-            VrcFilteredParams = Params.Where(ParamMatch).Where(IsVrcParam).ToDictionary(pair => pair.Key, pair => pair.Value);
+            UserFilteredParams = Params.Where(ParamMatch).Where(IsUserParam).OrderBy(pair => pair.Value.Type).ThenBy(pair => pair.Value.Name).ToDictionary(pair => pair.Key, pair => pair.Value);
+            VrcFilteredParams = Params.Where(ParamMatch).Where(IsVrcParam).OrderBy(pair => pair.Value.Type).ThenBy(pair => pair.Value.Name).ToDictionary(pair => pair.Key, pair => pair.Value);
         }
 
         private static bool TryGetFirst<T>(IEnumerable<T> enumerable, Func<T, bool> predicate, out T first) => !(first = enumerable.FirstOrDefault(predicate))?.Equals(default(T)) ?? true;
